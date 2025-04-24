@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="hero-content">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1>Premium Motorcycle Rentals</h1>
+                    <p class="lead">Experience the thrill of riding premium motorcycles with our top-tier rental service.</p>
+                    <div class="hero-buttons">
+                        <a href="{{ url_for('bikes') }}" class="btn btn-primary btn-lg">View Bikes</a>
+                        {% if not session.get('user_id') %}
+                            <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg ms-3">Join Now</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Bikes Section -->
+<section class="featured-bikes py-5">
+    <div class="container">
+        <h2 class="text-center mb-4">Featured Bikes</h2>
+        <div class="row">
+            {% for bike in bikes %}
+            <div class="col-md-4 mb-4">
+                <div class="bike-card">
+                    <img src="{{ url_for('static', filename=bike.image) }}" alt="{{ bike.name }}">
+                    <div class="bike-card-content">
+                        <h3>{{ bike.name }}</h3>
+                        <p>{{ bike.description[:100] }}...</p>
+                        <div class="bike-specs mb-3">
+                            <span><strong>Engine:</strong> {{ bike.engine }}</span>
+                            <span><strong>Power:</strong> {{ bike.power }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="price">₹{{ bike.price }}/km</span>
+                            <a href="{{ url_for('bike_detail', bike_id=bike.id) }}" class="btn">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-4">Why Choose Us</h2>
+        <div class="row">
+            <div class="col-md-4 mb-4">
+                <div class="feature-card text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <img src="{{ url_for('static', filename='images/icons/premium.png') }}" alt="Premium Bikes">
+                    </div>
+                    <h3>Premium Bikes</h3>
+                    <p>Access to a wide range of high-end motorcycles from top manufacturers.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <img src="{{ url_for('static', filename='images/icons/support.png') }}" alt="24/7 Support">
+                    </div>
+                    <h3>24/7 Support</h3>
+                    <p>Round-the-clock customer support and roadside assistance.</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="feature-card text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <img src="{{ url_for('static', filename='images/icons/insurance.png') }}" alt="Full Insurance">
+                    </div>
+                    <h3>Full Insurance</h3>
+                    <p>Comprehensive insurance coverage for worry-free riding.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Loyalty Program Section -->
+<section class="loyalty-program py-5">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h2>Join Our Loyalty Program</h2>
+                <p class="lead">Earn points with every ride and unlock exclusive benefits:</p>
+                <ul class="list-unstyled">
+                    <li>✓ Silver Tier: 5% discount on all rides</li>
+                    <li>✓ Gold Tier: 10% discount + priority booking</li>
+                    <li>✓ Platinum Tier: 15% discount + free accessories</li>
+                </ul>
+                {% if not session.get('user_id') %}
+                    <a href="{{ url_for('register') }}" class="btn btn-primary mt-3">Join Now</a>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <img src="{{ url_for('static', filename='images/loyalty-program.jpg') }}" alt="Loyalty Program" class="img-fluid rounded">
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url("{{ url_for('static', filename='images/hero-bg.jpg') }}");
+    background-size: cover;
+    background-position: center;
+    color: white;
+    padding: 100px 0;
+    margin-top: -80px;
+}
+
+.hero-content {
+    padding: 60px 0;
+}
+
+.hero-content h1 {
+    font-size: 3.5rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+}
+
+.feature-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.feature-icon img {
+    width: 64px;
+    height: 64px;
+}
+
+.loyalty-program {
+    background-color: #f8f9fa;
+}
+
+.loyalty-program ul li {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %} 

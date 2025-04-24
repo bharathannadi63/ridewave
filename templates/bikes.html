@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="bikes-page">
+    <!-- Search and Filter Section -->
+    <div class="search-filter-section py-4 bg-light">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <input type="text" class="form-control" id="searchInput" placeholder="Search bikes...">
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-select" id="typeFilter">
+                        <option value="">All Types</option>
+                        <option value="Sport">Sport</option>
+                        <option value="Cruiser">Cruiser</option>
+                        <option value="Electric">Electric</option>
+                        <option value="Naked">Naked</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-select" id="priceFilter">
+                        <option value="">Price Range</option>
+                        <option value="low">Low to High</option>
+                        <option value="high">High to Low</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <button class="btn btn-primary w-100" id="filterBtn">Apply Filters</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bikes Grid Section -->
+    <section class="bikes-grid-section py-5">
+        <div class="container">
+            <h2 class="text-center mb-4">Available Bikes</h2>
+            <div class="row" id="bikesGrid">
+                {% for bike in bikes %}
+                <div class="col-md-4 mb-4 bike-card-container" 
+                     data-type="{{ bike.type }}"
+                     data-price="{{ bike.price }}">
+                    <div class="bike-card">
+                        <div class="bike-image">
+                            <img src="{{ url_for('static', filename=bike.image) }}" alt="{{ bike.name }}">
+                            {% if not bike.is_available %}
+                            <div class="unavailable-overlay">
+                                <span>Currently Unavailable</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="bike-card-content">
+                            <h3>{{ bike.name }}</h3>
+                            <p class="bike-type">{{ bike.type }}</p>
+                            <div class="bike-specs">
+                                <div class="spec-item">
+                                    <span class="spec-label">Engine</span>
+                                    <span class="spec-value">{{ bike.engine }}</span>
+                                </div>
+                                <div class="spec-item">
+                                    <span class="spec-label">Power</span>
+                                    <span class="spec-value">{{ bike.power }}</span>
+                                </div>
+                                <div class="spec-item">
+                                    <span class="spec-label">Mileage</span>
+                                    <span class="spec-value">{{ bike.mileage }}</span>
+                                </div>
+                            </div>
+                            <div class="bike-price">
+                                <span class="price">₹{{ bike.price }}/km</span>
+                                <span class="min-kms">Min. {{ bike.min_kms }} km</span>
+                            </div>
+                            <a href="{{ url_for('bike_detail', bike_id=bike.id) }}" class="btn btn-primary w-100">
+                                {% if bike.is_available %}
+                                    Book Now
+                                {% else %}
+                                    View Details
+                                {% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+.bike-card-container {
+    transition: all 0.3s ease;
+}
+
+.bike-card {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+    height: 100%;
+}
+
+.bike-card:hover {
+    transform: translateY(-5px);
+}
+
+.bike-image {
+    position: relative;
+    height: 200px;
+    overflow: hidden;
+}
+
+.bike-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.unavailable-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.bike-card-content {
+    padding: 1.5rem;
+}
+
+.bike-card h3 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.bike-type {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.bike-specs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.spec-item {
+    text-align: center;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.spec-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    margin-bottom: 0.25rem;
+}
+
+.spec-value {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.bike-price {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.price {
+    color: #e74c3c;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.min-kms {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .bike-specs {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('searchInput');
+    const typeFilter = document.getElementById('typeFilter');
+    const priceFilter = document.getElementById('priceFilter');
+    const filterBtn = document.getElementById('filterBtn');
+    const bikeCards = document.querySelectorAll('.bike-card-container');
+
+    function filterBikes() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedType = typeFilter.value;
+        const priceOrder = priceFilter.value;
+
+        bikeCards.forEach(card => {
+            const bikeName = card.querySelector('h3').textContent.toLowerCase();
+            const bikeType = card.dataset.type;
+            const bikePrice = parseFloat(card.dataset.price);
+            
+            const matchesSearch = bikeName.includes(searchTerm);
+            const matchesType = !selectedType || bikeType === selectedType;
+            
+            if (matchesSearch && matchesType) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Sort by price if selected
+        if (priceOrder) {
+            const container = document.getElementById('bikesGrid');
+            const cards = Array.from(container.querySelectorAll('.bike-card-container'));
+            
+            cards.sort((a, b) => {
+                const priceA = parseFloat(a.dataset.price);
+                const priceB = parseFloat(b.dataset.price);
+                return priceOrder === 'low' ? priceA - priceB : priceB - priceA;
+            });
+
+            cards.forEach(card => container.appendChild(card));
+        }
+    }
+
+    filterBtn.addEventListener('click', filterBikes);
+    searchInput.addEventListener('input', filterBikes);
+    typeFilter.addEventListener('change', filterBikes);
+    priceFilter.addEventListener('change', filterBikes);
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Rides - RideWave</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <h1>RideWave</h1>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('book_ride') }}">Book Ride</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="rides-container">
+        <h2>My Rides</h2>
+        {% if rides %}
+            <div class="rides-grid">
+                {% for ride in rides %}
+                    <div class="ride-card">
+                        <div class="ride-info">
+                            <h3>Ride #{{ ride.id }}</h3>
+                            <p><strong>Status:</strong> <span class="status-{{ ride.status }}">{{ ride.status }}</span></p>
+                            <p><strong>Pickup:</strong> {{ ride.pickup_location }}</p>
+                            <p><strong>Dropoff:</strong> {{ ride.dropoff_location }}</p>
+                            <p><strong>Date:</strong> {{ ride.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                        {% if user.is_driver %}
+                            <div class="ride-actions">
+                                {% if ride.status == 'pending' %}
+                                    <form action="{{ url_for('accept_ride', ride_id=ride.id) }}" method="POST">
+                                        <button type="submit" class="btn-primary">Accept Ride</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-rides">
+                <p>You haven't booked any rides yet.</p>
+                <a href="{{ url_for('book_ride') }}" class="btn-primary">Book a Ride</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html> 

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RideWave - Premium Motorcycle Rides</title>
+    <link rel="stylesheet" href="static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <h1>RideWave</h1>
+        </div>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#premium-bikes">Premium Bikes</a></li>
+            <li><a href="#services">Services</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li><a href="/login" class="btn-login">Login</a></li>
+            <li><a href="/register" class="btn-register">Register</a></li>
+        </ul>
+    </nav>
+
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>Ride in Style, Ride Premium</h1>
+            <p>Experience the thrill of premium motorcycle rides with RideWave - Where luxury meets convenience</p>
+            <a href="/book-ride" class="btn-primary">Book a Premium Ride</a>
+        </div>
+    </section>
+
+    <section id="about" class="about">
+        <h2>About RideWave</h2>
+        <div class="about-content">
+            <div class="about-text">
+                <p>RideWave is a premium motorcycle ride-sharing platform that connects riders with luxury bikes. Our mission is to provide a premium transportation experience with top-of-the-line motorcycles and professional riders.</p>
+            </div>
+            <div class="about-image">
+                <img src="static/images/premium-bike.jpg" alt="Premium Motorcycle">
+            </div>
+        </div>
+    </section>
+
+    <section id="premium-bikes" class="premium-bikes">
+        <h2>Our Premium Fleet</h2>
+        <div class="bikes-grid">
+            <div class="bike-card">
+                <img src="static/images/bike1.jpg" alt="Premium Bike 1">
+                <h3>Ducati Panigale</h3>
+                <p>Experience the power of Italian engineering</p>
+            </div>
+            <div class="bike-card">
+                <img src="static/images/bike2.jpg" alt="Premium Bike 2">
+                <h3>BMW S1000RR</h3>
+                <p>German precision meets performance</p>
+            </div>
+            <div class="bike-card">
+                <img src="static/images/bike3.jpg" alt="Premium Bike 3">
+                <h3>Kawasaki Ninja H2</h3>
+                <p>Supercharged performance</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="services" class="services">
+        <h2>Our Premium Services</h2>
+        <div class="services-grid">
+            <div class="service-card">
+                <i class="fas fa-motorcycle"></i>
+                <h3>Premium Bikes</h3>
+                <p>Ride in style with our luxury motorcycle fleet</p>
+            </div>
+            <div class="service-card">
+                <i class="fas fa-clock"></i>
+                <h3>24/7 Availability</h3>
+                <p>Premium rides whenever you need them</p>
+            </div>
+            <div class="service-card">
+                <i class="fas fa-shield-alt"></i>
+                <h3>Professional Riders</h3>
+                <p>Experienced and certified premium riders</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="contact" class="contact">
+        <h2>Contact Us</h2>
+        <div class="contact-form">
+            <form action="/contact" method="POST">
+                <input type="text" name="name" placeholder="Your Name" required>
+                <input type="email" name="email" placeholder="Your Email" required>
+                <textarea name="message" placeholder="Your Message" required></textarea>
+                <button type="submit" class="btn-primary">Send Message</button>
+            </form>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>RideWave</h3>
+                <p>Premium motorcycle rides for the discerning rider</p>
+                <div class="contact-info">
+                    <p><i class="fas fa-phone"></i> +91 6303274056 (India)</p>
+                    <p><i class="fas fa-envelope"></i> ridewave@info.com</p>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="#home">Home</a></li>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#premium-bikes">Premium Bikes</a></li>
+                    <li><a href="#services">Services</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Connect With Us</h3>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 RideWave. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html> 

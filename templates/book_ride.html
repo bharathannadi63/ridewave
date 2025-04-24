@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book a Premium Ride - RideWave</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <h1>RideWave</h1>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('home') }}">Home</a></li>
+            <li><a href="{{ url_for('my_rides') }}">My Rides</a></li>
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="booking-container">
+        <div class="booking-box">
+            <h2>Book Your Premium Ride</h2>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            <form method="POST" action="{{ url_for('book_ride') }}">
+                <div class="form-group">
+                    <label for="pickup">Pickup Location</label>
+                    <input type="text" id="pickup" name="pickup" placeholder="Enter pickup address" required>
+                </div>
+                <div class="form-group">
+                    <label for="dropoff">Dropoff Location</label>
+                    <input type="text" id="dropoff" name="dropoff" placeholder="Enter dropoff address" required>
+                </div>
+                <div class="form-group">
+                    <label for="bike_type">Select Premium Bike</label>
+                    <select id="bike_type" name="bike_type" required>
+                        <option value="">Choose your premium bike</option>
+                        <option value="ducati">Ducati Panigale</option>
+                        <option value="bmw">BMW S1000RR</option>
+                        <option value="kawasaki">Kawasaki Ninja H2</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ride_time">Preferred Ride Time</label>
+                    <input type="datetime-local" id="ride_time" name="ride_time" required>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="helmet" required>
+                        I will wear a helmet (mandatory)
+                    </label>
+                </div>
+                <button type="submit" class="btn-primary">Book Premium Ride</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html> 
