@@ -823,43 +823,62 @@ def export_report(type):
         flash(f'Error generating report: {str(e)}', 'danger')
         return redirect(url_for('admin_dashboard'))
 
+@app.errorhandler(500)
+def internal_error(error):
+    app.logger.error(f"Server Error: {error}")
+    return render_template('500.html'), 500
+
+@app.errorhandler(404)
+def not_found_error(error):
+    return render_template('404.html'), 404
+
 def init_db():
     with app.app_context():
-        db.create_all()
-        
-        # Add loyalty tiers if they don't exist
-        if LoyaltyTier.query.count() == 0:
-            for tier_data in loyalty_tiers:
-                tier = LoyaltyTier(**tier_data)
-                db.session.add(tier)
+        try:
+            db.create_all()
+            
+            # Add loyalty tiers if they don't exist
+            if LoyaltyTier.query.count() == 0:
+                for tier_data in loyalty_tiers:
+                    tier = LoyaltyTier(**tier_data)
+                    db.session.add(tier)
 
-        # Add accessories if they don't exist
-        if Accessory.query.count() == 0:
-            for acc_data in sample_accessories:
-                accessory = Accessory(**acc_data)
-                db.session.add(accessory)
+            # Add accessories if they don't exist
+            if Accessory.query.count() == 0:
+                for acc_data in sample_accessories:
+                    accessory = Accessory(**acc_data)
+                    db.session.add(accessory)
 
-        # Add sample bikes if they don't exist
-        if Bike.query.count() == 0:
-            for bike_data in sample_bikes:
-                bike = Bike(**bike_data)
-                db.session.add(bike)
+            # Add sample bikes if they don't exist
+            if Bike.query.count() == 0:
+                for bike_data in sample_bikes:
+                    bike = Bike(**bike_data)
+                    db.session.add(bike)
 
-        # Initialize default settings if they don't exist
-        default_settings = {
-            'min_distance': ('100', 'Minimum booking distance in kilometers'),
-            'security_deposit': ('5000', 'Security deposit amount in rupees'),
-            'points_per_100': ('10', 'Loyalty points earned per 100 rupees spent'),
-            'cancellation_fee': ('20', 'Cancellation fee percentage')
-        }
-        
-        for key, (value, description) in default_settings.items():
-            if not Settings.query.filter_by(key=key).first():
-                setting = Settings(key=key, value=value, description=description)
-                db.session.add(setting)
+            # Initialize default settings if they don't exist
+            default_settings = {
+                'min_distance': ('100', 'Minimum booking distance in kilometers'),
+                'security_deposit': ('5000', 'Security deposit amount in rupees'),
+                'points_per_100': ('10', 'Loyalty points earned per 100 rupees spent'),
+                'cancellation_fee': ('20', 'Cancellation fee percentage')
+            }
+            
+            for key, (value, description) in default_settings.items():
+                if not Settings.query.filter_by(key=key).first():
+                    setting = Settings(key=key, value=value, description=description)
+                    db.session.add(setting)
 
-        db.session.commit()
+            db.session.commit()
+            print("Database initialized successfully")
+        except Exception as e:
+            print(f"Error initializing database: {str(e)}")
 
 if __name__ == '__main__':
-    init_db()
+    with app.app_context():
+        try:
+            db.create_all()
+            init_db()
+            print("Database initialized successfully")
+        except Exception as e:
+            print(f"Error initializing database: {str(e)}")
     app.run(host='0.0.0.0', port=5000, debug=False) 
