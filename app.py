@@ -7,18 +7,31 @@ import csv
 from io import StringIO
 from werkzeug.utils import secure_filename
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+import logging
+import sys
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 # Database configuration
-if os.getenv('DATABASE_URL'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL').replace('postgres://', 'postgresql://')
-else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ridewave.db'
+try:
+    if os.getenv('DATABASE_URL'):
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL').replace('postgres://', 'postgresql://')
+        logger.info("Using PostgreSQL database from DATABASE_URL")
+    else:
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ridewave.db'
+        logger.info("Using SQLite database")
+except Exception as e:
+    logger.error(f"Error configuring database: {str(e)}")
+    sys.exit(1)
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Initialize database
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -823,6 +836,24 @@ def export_report(type):
         flash(f'Error generating report: {str(e)}', 'danger')
         return redirect(url_for('admin_dashboard'))
 
+@app.route('/health')
+def health_check():
+    try:
+        # Test database connection
+        db.engine.connect()
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
 @app.errorhandler(500)
 def internal_error(error):
     app.logger.error(f"Server Error: {error}")
@@ -873,12 +904,25 @@ def init_db():
         except Exception as e:
             print(f"Error initializing database: {str(e)}")
 
+# Test database connection
+def test_db_connection():
+    try:
+        db.engine.connect()
+        logger.info("Database connection successful")
+        return True
+    except Exception as e:
+        logger.error(f"Database connection failed: {str(e)}")
+        return False
+
 if __name__ == '__main__':
     with app.app_context():
         try:
-            db.create_all()
-            init_db()
-            print("Database initialized successfully")
+            if test_db_connection():
+                db.create_all()
+                init_db()
+                logger.info("Database initialized successfully")
+            else:
+                logger.error("Failed to initialize database")
         except Exception as e:
-            print(f"Error initializing database: {str(e)}")
+            logger.error(f"Error during initialization: {str(e)}")
     app.run(host='0.0.0.0', port=5000, debug=False) 
