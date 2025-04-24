@@ -1,65 +1,165 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book a Premium Ride - RideWave</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
-<body>
-    <nav class="navbar">
-        <div class="logo">
-            <h1>RideWave</h1>
-        </div>
-        <ul class="nav-links">
-            <li><a href="{{ url_for('home') }}">Home</a></li>
-            <li><a href="{{ url_for('my_rides') }}">My Rides</a></li>
-            <li><a href="{{ url_for('logout') }}">Logout</a></li>
-        </ul>
-    </nav>
+{% extends "base.html" %}
 
-    <div class="booking-container">
-        <div class="booking-box">
-            <h2>Book Your Premium Ride</h2>
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            <form method="POST" action="{{ url_for('book_ride') }}">
-                <div class="form-group">
-                    <label for="pickup">Pickup Location</label>
-                    <input type="text" id="pickup" name="pickup" placeholder="Enter pickup address" required>
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Book Your Ride</h3>
                 </div>
-                <div class="form-group">
-                    <label for="dropoff">Dropoff Location</label>
-                    <input type="text" id="dropoff" name="dropoff" placeholder="Enter dropoff address" required>
+                <div class="card-body">
+                    <form id="bookingForm">
+                        <div class="mb-3">
+                            <label for="bike" class="form-label">Select Bike</label>
+                            <select class="form-select" id="bike" name="bike_id" required>
+                                <option value="">Choose a bike...</option>
+                                {% for bike in bikes %}
+                                <option value="{{ bike.id }}" data-price="{{ bike.price }}">
+                                    {{ bike.name }} - ₹{{ bike.price }}/day
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_date" class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" id="start_date" name="start_date" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="end_date" class="form-label">End Date</label>
+                                    <input type="date" class="form-control" id="end_date" name="end_date" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="license" class="form-label">License Number</label>
+                            <input type="text" class="form-control" id="license" name="license" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="experience" class="form-label">Years of Riding Experience</label>
+                            <input type="number" class="form-control" id="experience" name="experience" min="0" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Insurance Type</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="insurance" id="basic" value="basic" checked>
+                                <label class="form-check-label" for="basic">
+                                    Basic (₹500/day)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="insurance" id="premium" value="premium">
+                                <label class="form-check-label" for="premium">
+                                    Premium (₹1000/day)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="training" name="training">
+                                <label class="form-check-label" for="training">
+                                    Request Training Session (₹2000)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info" id="priceSummary" style="display: none;">
+                            <h5>Price Summary</h5>
+                            <p>Base Price: ₹<span id="basePrice">0</span></p>
+                            <p>Insurance: ₹<span id="insurancePrice">0</span></p>
+                            <p>Training: ₹<span id="trainingPrice">0</span></p>
+                            <hr>
+                            <p><strong>Total: ₹<span id="totalPrice">0</span></strong></p>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Book Now</button>
+                    </form>
                 </div>
-                <div class="form-group">
-                    <label for="bike_type">Select Premium Bike</label>
-                    <select id="bike_type" name="bike_type" required>
-                        <option value="">Choose your premium bike</option>
-                        <option value="ducati">Ducati Panigale</option>
-                        <option value="bmw">BMW S1000RR</option>
-                        <option value="kawasaki">Kawasaki Ninja H2</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="ride_time">Preferred Ride Time</label>
-                    <input type="datetime-local" id="ride_time" name="ride_time" required>
-                </div>
-                <div class="form-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="helmet" required>
-                        I will wear a helmet (mandatory)
-                    </label>
-                </div>
-                <button type="submit" class="btn-primary">Book Premium Ride</button>
-            </form>
+            </div>
         </div>
     </div>
-</body>
-</html> 
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('bookingForm');
+    const priceSummary = document.getElementById('priceSummary');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        const data = {
+            bike_id: formData.get('bike_id'),
+            start_date: formData.get('start_date'),
+            end_date: formData.get('end_date'),
+            license: formData.get('license'),
+            experience: formData.get('experience'),
+            insurance: formData.get('insurance'),
+            training: formData.get('training') === 'on'
+        };
+        
+        // Check availability
+        fetch('/check-availability', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.available) {
+                // Calculate price
+                return fetch('/calculate-price', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+            } else {
+                throw new Error('Bike is not available for the selected dates');
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            // Update price summary
+            document.getElementById('basePrice').textContent = result.base_price;
+            document.getElementById('totalPrice').textContent = result.total_price;
+            priceSummary.style.display = 'block';
+            
+            // Submit booking
+            return fetch('/book-ride', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            });
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert('Booking successful!');
+                window.location.href = '/my-rides';
+            } else {
+                throw new Error(result.message || 'Booking failed');
+            }
+        })
+        .catch(error => {
+            alert(error.message);
+        });
+    });
+});
+</script>
+{% endblock %} 

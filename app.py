@@ -9,6 +9,8 @@ from werkzeug.utils import secure_filename
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 import logging
 import sys
+import time
+import json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,8 +21,12 @@ app = Flask(__name__)
 # Database configuration
 try:
     if os.getenv('DATABASE_URL'):
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL').replace('postgres://', 'postgresql://')
-        logger.info("Using PostgreSQL database from DATABASE_URL")
+        # Parse the DATABASE_URL
+        db_url = os.getenv('DATABASE_URL')
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+        logger.info(f"Using PostgreSQL database: {db_url}")
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ridewave.db'
         logger.info("Using SQLite database")
@@ -31,7 +37,14 @@ except Exception as e:
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Initialize database
+# Initialize database with connection pooling
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_size': 5,
+    'max_overflow': 10,
+    'pool_timeout': 30,
+    'pool_recycle': 1800
+}
+
 db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -141,6 +154,21 @@ class Settings(db.Model):
             setting = Settings(key=key, value=value, description=description)
             db.session.add(setting)
         db.session.commit()
+
+class Booking(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bike_id = db.Column(db.Integer, db.ForeignKey('bike.id'), nullable=False)
+    start_date = db.Column(db.DateTime, nullable=False)
+    end_date = db.Column(db.DateTime, nullable=False)
+    total_price = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(20), default='pending')  # pending, confirmed, cancelled, completed
+    payment_status = db.Column(db.String(20), default='pending')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = db.relationship('User', backref='bookings')
+    bike = db.relationship('Bike', backref='bookings')
 
 # Sample bike data
 sample_bikes = [
@@ -382,134 +410,66 @@ def bike_detail(bike_id):
 @app.route('/book-ride', methods=['POST'])
 @login_required
 def book_ride():
-    bike_id = request.form['bike_id']
-    pickup_date = datetime.strptime(request.form['pickup_date'], '%Y-%m-%dT%H:%M')
-    dropoff_date = datetime.strptime(request.form['dropoff_date'], '%Y-%m-%dT%H:%M')
-    estimated_kms = int(request.form['estimated_kms'])
-    pickup_location = request.form['pickup_location']
-    dropoff_location = request.form['dropoff_location']
-    license_number = request.form['license_number']
-    riding_experience = int(request.form['riding_experience'])
-    insurance_type = request.form['insurance_type']
-    protection_plan = request.form.get('protection_plan')
-    training_requested = 'training_requested' in request.form
-    accessory_ids = request.form.getlist('accessories')
-
-    bike = Bike.query.get_or_404(bike_id)
-    user = current_user
-    
-    # Validate minimum kilometers
-    if estimated_kms < bike.min_kms:
-        flash(f'Minimum booking distance is {bike.min_kms} kilometers')
-        return redirect(url_for('bike_detail', bike_id=bike_id))
-    
-    # Validate riding experience based on bike type
-    min_experience = 3 if bike.type in ['Sport', 'Electric'] else 1
-    if riding_experience < min_experience:
-        flash(f'Minimum {min_experience} years of riding experience required for this bike type')
-        return redirect(url_for('bike_detail', bike_id=bike_id))
-
-    # Calculate rental duration in days
-    duration = (dropoff_date - pickup_date).days + 1
-
-    # Calculate costs
-    base_price = bike.price * estimated_kms
-    
-    # Calculate insurance cost
-    insurance_cost = {
-        'basic': base_price * 0.05,
-        'premium': base_price * 0.10,
-        'comprehensive': base_price * 0.15
-    }.get(insurance_type, base_price * 0.05)
-    
-    # Calculate protection plan cost
-    protection_cost = {
-        'basic': base_price * 0.03,
-        'premium': base_price * 0.07,
-        'complete': base_price * 0.12
-    }.get(protection_plan, 0)
-
-    # Calculate accessories cost
-    accessories_cost = 0
-    selected_accessories = []
-    if accessory_ids:
-        selected_accessories = Accessory.query.filter(Accessory.id.in_(accessory_ids)).all()
-        accessories_cost = sum(acc.price_per_day * duration for acc in selected_accessories)
-
-    # Calculate training cost
-    training_cost = 2000 if training_requested else 0
-    
-    # Calculate security deposit
-    security_deposit = float(Settings.get_value('security_deposit', {
-        'Sport': '50000',
-        'Electric': '50000',
-        'Cruiser': '30000',
-        'Naked': '30000'
-    }.get(bike.type, '30000')))
-
-    # Apply loyalty discount if applicable
-    discount_percentage = 0
-    if user.loyalty:
-        tier = LoyaltyTier.query.get(user.loyalty.tier_id)
-        if tier:
-            discount_percentage = tier.discount_percentage
-
-    subtotal = base_price + insurance_cost + protection_cost + accessories_cost + training_cost
-    discount_amount = subtotal * (discount_percentage / 100)
-    total_price = subtotal - discount_amount
-
-    # Calculate loyalty points to be earned (1 point per 100 rupees spent)
-    points_per_100 = int(Settings.get_value('points_per_100', '10'))
-    loyalty_points = int(total_price / 100) * points_per_100
-
-    ride = Ride(
-        user_id=current_user.id,
-        bike_id=bike_id,
-        pickup_date=pickup_date,
-        dropoff_date=dropoff_date,
-        pickup_location=pickup_location,
-        dropoff_location=dropoff_location,
-        estimated_kms=estimated_kms,
-        total_price=total_price,
-        security_deposit=security_deposit,
-        insurance_type=insurance_type,
-        license_number=license_number,
-        riding_experience=riding_experience,
-        protection_plan=protection_plan,
-        training_requested=training_requested,
-        loyalty_points_earned=loyalty_points,
-        applied_discount=discount_amount,
-        status='pending'
-    )
-
-    if selected_accessories:
-        ride.accessories.extend(selected_accessories)
-
-    db.session.add(ride)
-    bike.is_available = False
-
-    # Update user's loyalty points
-    if user.loyalty:
-        user.loyalty.points += loyalty_points
-        # Check for tier upgrade
-        next_tier = LoyaltyTier.query.filter(
-            LoyaltyTier.min_points > user.loyalty.points
-        ).order_by(LoyaltyTier.min_points.asc()).first()
-        if next_tier and user.loyalty.points >= next_tier.min_points:
-            user.loyalty.tier_id = next_tier.id
-    else:
-        # Create new loyalty record for user
-        loyalty = UserLoyalty(
-            user_id=user.id,
-            points=loyalty_points,
-            tier_id=LoyaltyTier.query.filter_by(min_points=0).first().id
+    try:
+        data = request.get_json()
+        
+        # Validate dates
+        start_date = datetime.strptime(data['start_date'], '%Y-%m-%d')
+        end_date = datetime.strptime(data['end_date'], '%Y-%m-%d')
+        if end_date <= start_date:
+            return jsonify({'success': False, 'message': 'End date must be after start date'})
+        
+        # Check availability again (in case of race conditions)
+        overlapping = Booking.query.filter(
+            Booking.bike_id == data['bike_id'],
+            Booking.status != 'cancelled',
+            Booking.start_date <= end_date,
+            Booking.end_date >= start_date
+        ).first()
+        
+        if overlapping:
+            return jsonify({'success': False, 'message': 'Bike is no longer available for the selected dates'})
+        
+        # Calculate price
+        bike = Bike.query.get_or_404(data['bike_id'])
+        duration = (end_date - start_date).days
+        base_price = bike.price * duration
+        
+        # Calculate insurance cost
+        insurance_cost = 500 if data['insurance'] == 'basic' else 1000
+        insurance_cost *= duration
+        
+        # Calculate training cost
+        training_cost = 2000 if data.get('training') else 0
+        
+        # Calculate total price
+        total_price = base_price + insurance_cost + training_cost
+        
+        # Create booking
+        booking = Booking(
+            user_id=current_user.id,
+            bike_id=data['bike_id'],
+            start_date=start_date,
+            end_date=end_date,
+            total_price=total_price,
+            status='pending'
         )
-        db.session.add(loyalty)
-
-    db.session.commit()
-
-    flash(f'Ride booked successfully! You\'ve earned {loyalty_points} loyalty points. Security deposit of ₹{security_deposit:,.2f} will be required at pickup.')
-    return redirect(url_for('my_rides'))
+        
+        db.session.add(booking)
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Booking created successfully',
+            'booking_id': booking.id
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 500
 
 @app.route('/my-rides')
 @login_required
@@ -840,12 +800,13 @@ def export_report(type):
 def health_check():
     try:
         # Test database connection
-        db.engine.connect()
-        return jsonify({
-            'status': 'healthy',
-            'database': 'connected',
-            'timestamp': datetime.utcnow().isoformat()
-        }), 200
+        with db.engine.connect() as conn:
+            conn.execute("SELECT 1")
+            return jsonify({
+                'status': 'healthy',
+                'database': 'connected',
+                'timestamp': datetime.utcnow().isoformat()
+            }), 200
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return jsonify({
@@ -904,25 +865,73 @@ def init_db():
         except Exception as e:
             print(f"Error initializing database: {str(e)}")
 
-# Test database connection
-def test_db_connection():
+# Test database connection with retry
+def test_db_connection(max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            with db.engine.connect() as conn:
+                conn.execute("SELECT 1")
+                logger.info("Database connection successful")
+                return True
+        except Exception as e:
+            logger.error(f"Database connection attempt {attempt + 1} failed: {str(e)}")
+            if attempt == max_retries - 1:
+                return False
+            time.sleep(2)  # Wait before retrying
+    return False
+
+@app.before_first_request
+def initialize_database():
     try:
-        db.engine.connect()
-        logger.info("Database connection successful")
-        return True
+        if test_db_connection():
+            db.create_all()
+            init_db()
+            logger.info("Database initialized successfully")
+        else:
+            logger.error("Failed to initialize database")
     except Exception as e:
-        logger.error(f"Database connection failed: {str(e)}")
-        return False
+        logger.error(f"Error during database initialization: {str(e)}")
+
+@app.route('/check-availability', methods=['POST'])
+def check_availability():
+    data = request.get_json()
+    bike_id = data.get('bike_id')
+    start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
+    end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d')
+    
+    # Check for overlapping bookings
+    overlapping = Booking.query.filter(
+        Booking.bike_id == bike_id,
+        Booking.status != 'cancelled',
+        Booking.start_date <= end_date,
+        Booking.end_date >= start_date
+    ).first()
+    
+    return jsonify({
+        'available': not bool(overlapping)
+    })
+
+@app.route('/calculate-price', methods=['POST'])
+def calculate_price():
+    data = request.get_json()
+    bike_id = data.get('bike_id')
+    start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
+    end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d')
+    
+    bike = Bike.query.get_or_404(bike_id)
+    duration = (end_date - start_date).days
+    
+    # Base price calculation
+    base_price = bike.price * duration
+    
+    # Apply any discounts or additional charges
+    total_price = base_price
+    
+    return jsonify({
+        'base_price': base_price,
+        'total_price': total_price,
+        'duration': duration
+    })
 
 if __name__ == '__main__':
-    with app.app_context():
-        try:
-            if test_db_connection():
-                db.create_all()
-                init_db()
-                logger.info("Database initialized successfully")
-            else:
-                logger.error("Failed to initialize database")
-        except Exception as e:
-            logger.error(f"Error during initialization: {str(e)}")
     app.run(host='0.0.0.0', port=5000, debug=False) 
