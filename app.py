@@ -11,30 +11,41 @@ import logging
 import sys
 import time
 import json
+from logging.handlers import RotatingFileHandler
+import traceback
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Add file handler for logging
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+file_handler = RotatingFileHandler('logs/app.log', maxBytes=10240, backupCount=10)
+file_handler.setFormatter(logging.Formatter(
+    '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+))
+file_handler.setLevel(logging.INFO)
+logger.addHandler(file_handler)
+
 app = Flask(__name__)
 
-# Database configuration
-try:
-    if os.getenv('DATABASE_URL'):
-        # Parse the DATABASE_URL
-        db_url = os.getenv('DATABASE_URL')
-        if db_url.startswith('postgres://'):
-            db_url = db_url.replace('postgres://', 'postgresql://', 1)
-        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-        logger.info(f"Using PostgreSQL database: {db_url}")
-    else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ridewave.db'
-        logger.info("Using SQLite database")
-except Exception as e:
-    logger.error(f"Error configuring database: {str(e)}")
-    sys.exit(1)
+# Configure database URL for Railway
+if os.getenv('DATABASE_URL'):
+    # Parse the DATABASE_URL
+    db_url = os.getenv('DATABASE_URL')
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    logger.info(f"Using PostgreSQL database: {db_url}")
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///ridewave.db'
+    logger.info("Using SQLite database")
 
+# Configure secret key
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(24))
+
+# Configure SQLAlchemy
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize database with connection pooling
@@ -76,10 +87,20 @@ class Bike(db.Model):
     engine = db.Column(db.String(50))
     power = db.Column(db.String(50))
     mileage = db.Column(db.String(50))
-    type = db.Column(db.String(50))
+    type = db.Column(db.String(50))  # Sport, Cruiser, Touring, etc.
     gallery_images = db.Column(db.JSON)
     is_available = db.Column(db.Boolean, default=True)
     min_kms = db.Column(db.Integer, nullable=False)
+    is_premium = db.Column(db.Boolean, default=False)
+    features = db.Column(db.JSON)  # Premium features like ABS, Traction Control, etc.
+    specifications = db.Column(db.JSON)  # Detailed specs
+    safety_rating = db.Column(db.Float)  # Safety rating out of 5
+    comfort_rating = db.Column(db.Float)  # Comfort rating out of 5
+    performance_rating = db.Column(db.Float)  # Performance rating out of 5
+    maintenance_history = db.Column(db.JSON)  # Service history
+    last_service_date = db.Column(db.DateTime)
+    next_service_date = db.Column(db.DateTime)
+    service_interval = db.Column(db.Integer)  # Service interval in kilometers
 
 class LoyaltyTier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -173,106 +194,127 @@ class Booking(db.Model):
 # Sample bike data
 sample_bikes = [
     {
-        'name': 'Harley-Davidson LiveWire',
-        'description': 'Revolutionary electric motorcycle combining Harley-Davidson\'s heritage with cutting-edge technology. Experience instant torque and a thrilling, silent ride.',
-        'price': 15,  # Price per km
-        'image': 'bikes/harley-livewire.jpg',
-        'engine': 'Electric',
-        'power': '105 HP',
-        'mileage': '146 miles range',
-        'type': 'Electric',
+        'name': 'Ducati Panigale V4',
+        'description': 'The ultimate Italian superbike with cutting-edge technology and breathtaking performance. Features advanced electronics and race-bred engineering.',
+        'price': 15000,  # Price per day
+        'image': 'bikes/ducati-panigale.jpg',
+        'engine': '1103 cc',
+        'power': '214 HP',
+        'mileage': '12 km/l',
+        'type': 'Sport',
         'gallery_images': [
-            'bikes/harley-livewire.jpg',
-            'bikes/harley-livewire-2.jpg'
+            'bikes/ducati-panigale-1.jpg',
+            'bikes/ducati-panigale-2.jpg'
         ],
-        'min_kms': 100  # Minimum kilometers for booking
+        'min_kms': 100,
+        'is_premium': True,
+        'features': {
+            'ABS': 'Yes',
+            'Traction Control': 'Yes',
+            'Riding Modes': 'Race, Sport, Street, Wet',
+            'Electronic Suspension': 'Yes',
+            'Quick Shifter': 'Yes',
+            'Launch Control': 'Yes'
+        },
+        'specifications': {
+            'Top Speed': '299 km/h',
+            '0-100 km/h': '2.9 seconds',
+            'Weight': '198 kg',
+            'Fuel Capacity': '16L',
+            'Seat Height': '830 mm'
+        },
+        'safety_rating': 4.8,
+        'comfort_rating': 3.9,
+        'performance_rating': 5.0,
+        'maintenance_history': [
+            {'date': '2024-01-15', 'service': 'Full Service', 'kms': 5000},
+            {'date': '2024-03-20', 'service': 'Oil Change', 'kms': 7500}
+        ],
+        'last_service_date': datetime(2024, 3, 20),
+        'next_service_date': datetime(2024, 6, 20),
+        'service_interval': 5000
     },
     {
         'name': 'BMW S1000RR',
-        'description': 'The ultimate sport bike with cutting-edge technology and breathtaking performance. Features advanced electronics and race-bred engineering.',
-        'price': 18,  # Price per km
+        'description': 'German engineering excellence with perfect balance of power and precision. Features advanced aerodynamics and race-ready performance.',
+        'price': 12000,
         'image': 'bikes/bmw-s1000rr.jpg',
         'engine': '999 cc',
         'power': '205 HP',
         'mileage': '15 km/l',
         'type': 'Sport',
         'gallery_images': [
-            'bikes/bmw-s1000rr.jpg',
+            'bikes/bmw-s1000rr-1.jpg',
             'bikes/bmw-s1000rr-2.jpg'
         ],
-        'min_kms': 100
-    },
-    {
-        'name': 'Yamaha R1',
-        'description': 'Track-focused superbike with MotoGP-derived technology. Features electronic racing suspension and carbon fiber bodywork.',
-        'price': 16,  # Price per km
-        'image': 'bikes/yamaha-r1.jpg',
-        'engine': '998 cc',
-        'power': '200 HP',
-        'mileage': '16 km/l',
-        'type': 'Sport',
-        'gallery_images': [
-            'bikes/yamaha-r1.jpg',
-            'bikes/yamaha-r1-2.jpg'
+        'min_kms': 100,
+        'is_premium': True,
+        'features': {
+            'ABS': 'Yes',
+            'Traction Control': 'Yes',
+            'Riding Modes': 'Race, Sport, Rain, User',
+            'Electronic Suspension': 'Yes',
+            'Quick Shifter': 'Yes',
+            'Launch Control': 'Yes'
+        },
+        'specifications': {
+            'Top Speed': '303 km/h',
+            '0-100 km/h': '3.1 seconds',
+            'Weight': '197 kg',
+            'Fuel Capacity': '16.5L',
+            'Seat Height': '824 mm'
+        },
+        'safety_rating': 4.7,
+        'comfort_rating': 4.0,
+        'performance_rating': 4.9,
+        'maintenance_history': [
+            {'date': '2024-02-10', 'service': 'Full Service', 'kms': 6000},
+            {'date': '2024-04-15', 'service': 'Oil Change', 'kms': 8500}
         ],
-        'min_kms': 100
+        'last_service_date': datetime(2024, 4, 15),
+        'next_service_date': datetime(2024, 7, 15),
+        'service_interval': 5000
     },
     {
-        'name': 'Indian Scout',
-        'description': 'Modern American cruiser with stripped-down, blacked-out style. Perfect blend of classic design and modern performance.',
-        'price': 12,  # Price per km
-        'image': 'bikes/indian-scout.jpg',
-        'engine': '1133 cc',
-        'power': '100 HP',
-        'mileage': '20 km/l',
-        'type': 'Cruiser',
-        'gallery_images': [
-            'bikes/indian-scout.jpg',
-            'bikes/indian-scout-2.jpg'
-        ],
-        'min_kms': 100
-    },
-    {
-        'name': 'KTM Duke 890',
-        'description': 'Aggressive street fighter with precise handling and thrilling performance. The perfect balance of power and agility.',
-        'price': 10,  # Price per km
-        'image': 'bikes/ktm-duke-890.jpg',
-        'engine': '889 cc',
-        'power': '115 HP',
-        'mileage': '20 km/l',
-        'type': 'Naked',
-        'gallery_images': [
-            'bikes/ktm-duke-890.jpg',
-            'bikes/ktm-duke-890-forest.jpg'
-        ],
-        'min_kms': 50
-    },
-    {
-        'name': 'Harley-Davidson Sportster',
-        'description': 'Iconic American motorcycle combining classic styling with modern technology. Perfect for both city cruising and long rides.',
-        'price': 11,  # Price per km
-        'image': 'bikes/harley-sportster.jpg',
-        'engine': '1200 cc',
-        'power': '60 HP',
+        'name': 'Harley-Davidson CVO Limited',
+        'description': 'The pinnacle of American luxury touring. Features premium comfort and state-of-the-art technology for the ultimate riding experience.',
+        'price': 10000,
+        'image': 'bikes/harley-cvo.jpg',
+        'engine': '1923 cc',
+        'power': '97 HP',
         'mileage': '18 km/l',
-        'type': 'Cruiser',
+        'type': 'Touring',
         'gallery_images': [
-            'bikes/harley-sportster.jpg',
-            'bikes/harley-sportster-riding.jpg'
+            'bikes/harley-cvo-1.jpg',
+            'bikes/harley-cvo-2.jpg'
         ],
-        'min_kms': 50
-    },
-    {
-        'name': 'KTM RC 390',
-        'description': 'Race-inspired design with powerful performance and agile handling. Perfect for both track days and daily commuting.',
-        'price': 8,  # Price per km
-        'image': 'bikes/ktm-rc390.jpg',
-        'engine': '373.2 cc',
-        'power': '43 HP',
-        'mileage': '25 km/l',
-        'type': 'Sport',
-        'gallery_images': ['bikes/ktm-rc390.jpg'],
-        'min_kms': 50
+        'min_kms': 50,
+        'is_premium': True,
+        'features': {
+            'ABS': 'Yes',
+            'Traction Control': 'Yes',
+            'Riding Modes': 'Tour, Sport, Rain',
+            'Cruise Control': 'Yes',
+            'Infotainment System': 'Yes',
+            'Heated Seats': 'Yes'
+        },
+        'specifications': {
+            'Top Speed': '180 km/h',
+            '0-100 km/h': '4.5 seconds',
+            'Weight': '417 kg',
+            'Fuel Capacity': '22.7L',
+            'Seat Height': '740 mm'
+        },
+        'safety_rating': 4.6,
+        'comfort_rating': 4.9,
+        'performance_rating': 4.5,
+        'maintenance_history': [
+            {'date': '2024-01-20', 'service': 'Full Service', 'kms': 8000},
+            {'date': '2024-03-25', 'service': 'Oil Change', 'kms': 10000}
+        ],
+        'last_service_date': datetime(2024, 3, 25),
+        'next_service_date': datetime(2024, 6, 25),
+        'service_interval': 5000
     }
 ]
 
@@ -800,13 +842,12 @@ def export_report(type):
 def health_check():
     try:
         # Test database connection
-        with db.engine.connect() as conn:
-            conn.execute("SELECT 1")
-            return jsonify({
-                'status': 'healthy',
-                'database': 'connected',
-                'timestamp': datetime.utcnow().isoformat()
-            }), 200
+        db.engine.connect()
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         return jsonify({
@@ -815,123 +856,74 @@ def health_check():
             'timestamp': datetime.utcnow().isoformat()
         }), 500
 
-@app.errorhandler(500)
-def internal_error(error):
-    app.logger.error(f"Server Error: {error}")
-    return render_template('500.html'), 500
+@app.errorhandler(Exception)
+def handle_exception(e):
+    # Log the error
+    logger.error(f"Unhandled Exception: {str(e)}")
+    logger.error(traceback.format_exc())
+    
+    # Return a proper error response
+    return jsonify({
+        'error': 'Internal Server Error',
+        'message': str(e),
+        'traceback': traceback.format_exc() if app.debug else None
+    }), 500
 
-@app.errorhandler(404)
-def not_found_error(error):
-    return render_template('404.html'), 404
+@app.before_request
+def before_request():
+    logger.info(f"Request: {request.method} {request.url}")
+    logger.info(f"Headers: {dict(request.headers)}")
+    logger.info(f"Data: {request.get_data()}")
+
+@app.after_request
+def after_request(response):
+    logger.info(f"Response: {response.status}")
+    return response
 
 def init_db():
-    with app.app_context():
-        try:
-            db.create_all()
+    try:
+        with app.app_context():
+            # Test database connection
+            db.engine.connect()
+            logger.info("Database connection successful")
             
-            # Add loyalty tiers if they don't exist
-            if LoyaltyTier.query.count() == 0:
-                for tier_data in loyalty_tiers:
-                    tier = LoyaltyTier(**tier_data)
-                    db.session.add(tier)
-
-            # Add accessories if they don't exist
-            if Accessory.query.count() == 0:
-                for acc_data in sample_accessories:
-                    accessory = Accessory(**acc_data)
-                    db.session.add(accessory)
-
-            # Add sample bikes if they don't exist
+            # Create tables
+            db.create_all()
+            logger.info("Database tables created")
+            
+            # Initialize sample data
             if Bike.query.count() == 0:
                 for bike_data in sample_bikes:
                     bike = Bike(**bike_data)
                     db.session.add(bike)
-
-            # Initialize default settings if they don't exist
-            default_settings = {
-                'min_distance': ('100', 'Minimum booking distance in kilometers'),
-                'security_deposit': ('5000', 'Security deposit amount in rupees'),
-                'points_per_100': ('10', 'Loyalty points earned per 100 rupees spent'),
-                'cancellation_fee': ('20', 'Cancellation fee percentage')
-            }
+                db.session.commit()
+                logger.info("Sample bikes added to database")
             
-            for key, (value, description) in default_settings.items():
-                if not Settings.query.filter_by(key=key).first():
-                    setting = Settings(key=key, value=value, description=description)
-                    db.session.add(setting)
-
-            db.session.commit()
-            print("Database initialized successfully")
-        except Exception as e:
-            print(f"Error initializing database: {str(e)}")
-
-# Test database connection with retry
-def test_db_connection(max_retries=3):
-    for attempt in range(max_retries):
-        try:
-            with db.engine.connect() as conn:
-                conn.execute("SELECT 1")
-                logger.info("Database connection successful")
-                return True
-        except Exception as e:
-            logger.error(f"Database connection attempt {attempt + 1} failed: {str(e)}")
-            if attempt == max_retries - 1:
-                return False
-            time.sleep(2)  # Wait before retrying
-    return False
-
-@app.before_first_request
-def initialize_database():
-    try:
-        if test_db_connection():
-            db.create_all()
-            init_db()
-            logger.info("Database initialized successfully")
-        else:
-            logger.error("Failed to initialize database")
+            if Settings.query.count() == 0:
+                settings = Settings(
+                    security_deposit=5000,
+                    points_per_100=10,
+                    cancellation_fee=20
+                )
+                db.session.add(settings)
+                db.session.commit()
+                logger.info("Default settings added to database")
+            
+            logger.info("Database initialization completed successfully")
     except Exception as e:
-        logger.error(f"Error during database initialization: {str(e)}")
-
-@app.route('/check-availability', methods=['POST'])
-def check_availability():
-    data = request.get_json()
-    bike_id = data.get('bike_id')
-    start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
-    end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d')
-    
-    # Check for overlapping bookings
-    overlapping = Booking.query.filter(
-        Booking.bike_id == bike_id,
-        Booking.status != 'cancelled',
-        Booking.start_date <= end_date,
-        Booking.end_date >= start_date
-    ).first()
-    
-    return jsonify({
-        'available': not bool(overlapping)
-    })
-
-@app.route('/calculate-price', methods=['POST'])
-def calculate_price():
-    data = request.get_json()
-    bike_id = data.get('bike_id')
-    start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
-    end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d')
-    
-    bike = Bike.query.get_or_404(bike_id)
-    duration = (end_date - start_date).days
-    
-    # Base price calculation
-    base_price = bike.price * duration
-    
-    # Apply any discounts or additional charges
-    total_price = base_price
-    
-    return jsonify({
-        'base_price': base_price,
-        'total_price': total_price,
-        'duration': duration
-    })
+        logger.error(f"Database initialization failed: {str(e)}")
+        logger.error(traceback.format_exc())
+        raise
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False) 
+    try:
+        # Initialize database
+        init_db()
+        
+        # Start the application
+        logger.info("Starting application...")
+        app.run(host='0.0.0.0', port=5000, debug=False)
+    except Exception as e:
+        logger.error(f"Application failed to start: {str(e)}")
+        logger.error(traceback.format_exc())
+        sys.exit(1) 

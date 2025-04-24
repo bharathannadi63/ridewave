@@ -1,213 +1,176 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="bike-detail-page">
-    <div class="container py-5">
-        <div class="row">
-            <!-- Bike Image Gallery -->
-            <div class="col-lg-6 mb-4">
-                <div class="bike-gallery">
-                    <div class="main-image mb-3">
-                        <img src="{{ url_for('static', filename=bike.image) }}" alt="{{ bike.name }}" class="img-fluid rounded">
-                    </div>
-                    <div class="thumbnail-gallery d-flex gap-2">
-                        {% for image in bike.gallery_images %}
-                        <img src="{{ url_for('static', filename=image) }}" alt="{{ bike.name }}" class="img-thumbnail" style="width: 80px; height: 60px; object-fit: cover;">
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bike Details -->
-            <div class="col-lg-6">
-                <div class="bike-details">
-                    <h1 class="mb-3">{{ bike.name }}</h1>
-                    <div class="bike-type-badge mb-3">
-                        <span class="badge bg-primary">{{ bike.type }}</span>
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <img src="{{ url_for('static', filename=bike.image) }}" class="card-img-top" alt="{{ bike.name }}">
+                <div class="card-body">
+                    <h2 class="card-title">{{ bike.name }}</h2>
+                    <p class="card-text">{{ bike.description }}</p>
+                    
+                    {% if bike.is_premium %}
+                    <div class="badge bg-warning text-dark mb-3">Premium Motorcycle</div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Key Specifications</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>Engine:</strong> {{ bike.engine }}</li>
+                                <li><strong>Power:</strong> {{ bike.power }}</li>
+                                <li><strong>Mileage:</strong> {{ bike.mileage }}</li>
+                                <li><strong>Type:</strong> {{ bike.type }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Performance</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>Top Speed:</strong> {{ bike.specifications['Top Speed'] }}</li>
+                                <li><strong>0-100 km/h:</strong> {{ bike.specifications['0-100 km/h'] }}</li>
+                                <li><strong>Weight:</strong> {{ bike.specifications['Weight'] }}</li>
+                                <li><strong>Fuel Capacity:</strong> {{ bike.specifications['Fuel Capacity'] }}</li>
+                            </ul>
+                        </div>
                     </div>
                     
-                    <div class="price-section mb-4">
-                        <h2 class="text-danger">₹{{ bike.price }}/km</h2>
-                        <p class="text-muted">Minimum {{ bike.min_kms }} km required</p>
+                    <h5 class="mt-4">Premium Features</h5>
+                    <div class="row">
+                        {% for feature, value in bike.features.items() %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>{{ feature }}: {{ value }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-
-                    <div class="specifications mb-4">
-                        <h3 class="mb-3">Specifications</h3>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <div class="spec-item">
-                                    <span class="spec-label">Engine</span>
-                                    <span class="spec-value">{{ bike.engine }}</span>
+                    
+                    <h5 class="mt-4">Ratings</h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Safety</h6>
+                                <div class="rating">
+                                    {% for i in range(5) %}
+                                    <i class="fas fa-star {% if i < bike.safety_rating %}text-warning{% else %}text-secondary{% endif %}"></i>
+                                    {% endfor %}
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="spec-item">
-                                    <span class="spec-label">Power</span>
-                                    <span class="spec-value">{{ bike.power }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Comfort</h6>
+                                <div class="rating">
+                                    {% for i in range(5) %}
+                                    <i class="fas fa-star {% if i < bike.comfort_rating %}text-warning{% else %}text-secondary{% endif %}"></i>
+                                    {% endfor %}
                                 </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="spec-item">
-                                    <span class="spec-label">Mileage</span>
-                                    <span class="spec-value">{{ bike.mileage }}</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <div class="spec-item">
-                                    <span class="spec-label">Fuel Type</span>
-                                    <span class="spec-value">{{ bike.fuel_type }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Performance</h6>
+                                <div class="rating">
+                                    {% for i in range(5) %}
+                                    <i class="fas fa-star {% if i < bike.performance_rating %}text-warning{% else %}text-secondary{% endif %}"></i>
+                                    {% endfor %}
                                 </div>
                             </div>
                         </div>
                     </div>
-
-                    <div class="features mb-4">
-                        <h3 class="mb-3">Features</h3>
-                        <ul class="list-unstyled">
-                            {% for feature in bike.features %}
-                            <li class="mb-2">
-                                <i class="fas fa-check text-success me-2"></i>
-                                {{ feature }}
-                            </li>
-                            {% endfor %}
-                        </ul>
+                    
+                    <h5 class="mt-4">Maintenance History</h5>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Service</th>
+                                    <th>Kilometers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for service in bike.maintenance_history %}
+                                <tr>
+                                    <td>{{ service.date }}</td>
+                                    <td>{{ service.service }}</td>
+                                    <td>{{ service.kms }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-
-                    {% if bike.is_available %}
-                    <div class="booking-section">
-                        <h3 class="mb-3">Book This Bike</h3>
-                        <form action="{{ url_for('book_ride', bike_id=bike.id) }}" method="POST" class="booking-form">
-                            <div class="mb-3">
-                                <label for="pickup_date" class="form-label">Pickup Date</label>
-                                <input type="date" class="form-control" id="pickup_date" name="pickup_date" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="estimated_kms" class="form-label">Estimated Kilometers</label>
-                                <input type="number" class="form-control" id="estimated_kms" name="estimated_kms" 
-                                       min="{{ bike.min_kms }}" required>
-                                <small class="text-muted">Minimum {{ bike.min_kms }} km required</small>
-                            </div>
-                            <div class="mb-3">
-                                <label for="pickup_location" class="form-label">Pickup Location</label>
-                                <input type="text" class="form-control" id="pickup_location" name="pickup_location" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="dropoff_location" class="form-label">Drop-off Location</label>
-                                <input type="text" class="form-control" id="dropoff_location" name="dropoff_location" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100">Book Now</button>
-                        </form>
+                    
+                    <div class="alert alert-info mt-4">
+                        <h6>Next Service Due</h6>
+                        <p>Date: {{ bike.next_service_date.strftime('%Y-%m-%d') }}</p>
+                        <p>Service Interval: {{ bike.service_interval }} km</p>
                     </div>
-                    {% else %}
-                    <div class="alert alert-warning">
-                        <h4>Currently Unavailable</h4>
-                        <p>This bike is currently not available for booking. Please check back later or contact our support team for more information.</p>
-                    </div>
-                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h3 class="card-title">Book This Premium Motorcycle</h3>
+                    <p class="text-muted">Price: ₹{{ bike.price }}/day</p>
+                    
+                    <form action="{{ url_for('book_ride') }}" method="POST">
+                        <input type="hidden" name="bike_id" value="{{ bike.id }}">
+                        
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="license" class="form-label">License Number</label>
+                            <input type="text" class="form-control" id="license" name="license" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="experience" class="form-label">Years of Riding Experience</label>
+                            <input type="number" class="form-control" id="experience" name="experience" min="0" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Insurance Type</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="insurance" id="basic" value="basic" checked>
+                                <label class="form-check-label" for="basic">
+                                    Basic (₹500/day)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="insurance" id="premium" value="premium">
+                                <label class="form-check-label" for="premium">
+                                    Premium (₹1000/day)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="training" name="training">
+                                <label class="form-check-label" for="training">
+                                    Request Training Session (₹2000)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Book Now</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-.bike-gallery {
-    background: white;
-    padding: 1rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.main-image {
-    height: 400px;
-    overflow: hidden;
-    border-radius: 8px;
-}
-
-.main-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.thumbnail-gallery img {
-    cursor: pointer;
-    transition: transform 0.3s;
-}
-
-.thumbnail-gallery img:hover {
-    transform: scale(1.1);
-}
-
-.bike-details {
-    background: white;
-    padding: 2rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.spec-item {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 8px;
-}
-
-.spec-label {
-    display: block;
-    color: #7f8c8d;
-    font-size: 0.9rem;
-    margin-bottom: 0.25rem;
-}
-
-.spec-value {
-    font-weight: 500;
-    color: #2c3e50;
-}
-
-.booking-form {
-    background: #f8f9fa;
-    padding: 1.5rem;
-    border-radius: 8px;
-}
-
-@media (max-width: 768px) {
-    .main-image {
-        height: 300px;
-    }
-}
-</style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const thumbnails = document.querySelectorAll('.thumbnail-gallery img');
-    const mainImage = document.querySelector('.main-image img');
-
-    thumbnails.forEach(thumb => {
-        thumb.addEventListener('click', function() {
-            mainImage.src = this.src;
-        });
-    });
-
-    // Set minimum date for pickup
-    const pickupDate = document.getElementById('pickup_date');
-    const today = new Date().toISOString().split('T')[0];
-    pickupDate.min = today;
-
-    // Calculate estimated price
-    const estimatedKms = document.getElementById('estimated_kms');
-    const pricePerKm = {{ bike.price }};
-    const minKms = {{ bike.min_kms }};
-
-    estimatedKms.addEventListener('input', function() {
-        const kms = parseInt(this.value);
-        if (kms < minKms) {
-            this.setCustomValidity(`Minimum ${minKms} km required`);
-        } else {
-            this.setCustomValidity('');
-            const estimatedPrice = kms * pricePerKm;
-            // You can display the estimated price somewhere if needed
-        }
-    });
-});
-</script>
 {% endblock %} 
